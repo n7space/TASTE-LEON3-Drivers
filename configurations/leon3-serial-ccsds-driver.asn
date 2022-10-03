@@ -1,0 +1,17 @@
+LEON3-SERIAL-CCSDS-DRIVER DEFINITIONS AUTOMATIC TAGS ::= BEGIN
+
+Serial-CCSDS-LEON3-Device-T    ::= ENUMERATED { uart0, uart1, uart2, uart3, uart4, uart5 }
+
+Serial-CCSDS-LEON3-Baudrate-T  ::= ENUMERATED {b9600, b19200, b38400, b57600, b115200, b230400}
+
+Serial-CCSDS-LEON3-Parity-T    ::= ENUMERATED {even, odd}
+
+Serial-CCSDS-LEON3-Conf-T ::= SEQUENCE {
+   devname        Serial-CCSDS-LEON3-Device-T,
+   speed          Serial-CCSDS-LEON3-Baudrate-T OPTIONAL,
+   parity         Serial-CCSDS-LEON3-Parity-T OPTIONAL,
+   bits           INTEGER (7 .. 8) OPTIONAL,
+   use-paritybit  BOOLEAN  OPTIONAL
+}
+
+END
