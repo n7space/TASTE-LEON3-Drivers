@@ -29,14 +29,26 @@
 
 #include "Uart.h"
 
+#define DRIVER_TASK_PRIORITY 1
+#define Serial_CCSDS_LEON3_BUFFER_SIZE 256
+#define Serial_CCSDS_LEON3_ENCODED_PACKET_MAX_SIZE 256
+#define Serial_CCSDS_LEON3_DECODED_PACKET_MAX_SIZE BROKER_BUFFER_SIZE
+#define MAX_DELAY 0xFFFFFFFFu
+
 typedef struct final {
-    Escaper m_escaper;
+    Escaper escaper;
     Uart uart;
-    enum SystemBus m_ip_device_bus_id;
+    enum SystemBus ipDeviceBusId;
     Uart_TxHandler txHandler;
     Uart_RxHandler rxHandler;
     ByteFifo *fifoTx;
     ByteFifo *fifoRx;
+    rtems_id semRx;
+    rtems_id semTx;
+    rtems_id taskId;
+    uint8_t recvBuffer[Serial_CCSDS_LEON3_BUFFER_SIZE];
+    uint8_t encodedPacketBuffer[Serial_CCSDS_LEON3_ENCODED_PACKET_MAX_SIZE];
+    uint8_t decodedPacketBuffer[Serial_CCSDS_LEON3_DECODED_PACKET_MAX_SIZE];
 } leon3_serial_ccsds_private_data;
 
 /**

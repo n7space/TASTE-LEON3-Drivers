@@ -26,20 +26,21 @@
 
 #include <EscaperInternal.h>
 
-BYTE_FIFO_CREATE(uartFifoTx, 256);
-BYTE_FIFO_CREATE(uartFifoRx, 256);
+BYTE_FIFO_CREATE(uartFifoTx, Serial_CCSDS_LEON3_BUFFER_SIZE);
+BYTE_FIFO_CREATE(uartFifoRx, Serial_CCSDS_LEON3_BUFFER_SIZE);
 
 static void UartRxCallback(void *private_data) {
-  // samv71_serial_ccsds_private_data *self =
-  //     (samv71_serial_ccsds_private_data *)private_data;
-  // xSemaphoreGiveFromISR(self->m_rx_semaphore, NULL);
+  leon3_serial_ccsds_private_data *self =
+      (leon3_serial_ccsds_private_data *)private_data;
+
+  rtems_semaphore_release(self->semRx);
 }
 
 static void *UartTxCallback(void *private_data) {
-  // samv71_serial_ccsds_private_data *self =
-  //     (samv71_serial_ccsds_private_data *)private_data;
+  leon3_serial_ccsds_private_data *self =
+      (leon3_serial_ccsds_private_data *)private_data;
 
-  // xSemaphoreGiveFromISR(self->m_tx_semaphore, NULL);
+  rtems_semaphore_release(self->semTx);
 }
 
 static inline Uart_Id getUartId(const Serial_CCSDS_Leon3_Device_T dev)
@@ -75,10 +76,11 @@ static inline Uart_Id getUartId(const Serial_CCSDS_Leon3_Device_T dev)
   }
 }
 
-static inline void getUartParity(const Serial_CCSDS_Leon3_Conf_T *const device_configuration)
+static inline void getUartParity(
+    const Serial_CCSDS_Leon3_Conf_T *const deviceConfiguration)
 {
-  if (device_configuration->use_paritybit) {
-    if ( device_configuration->parity == Serial_CCSDS_Leon3_Parity_T_odd) {
+  if (deviceConfiguration->use_paritybit) {
+    if ( deviceConfiguration->parity == Serial_CCSDS_Leon3_Parity_T_odd) {
       return Uart_Parity_Odd;
     } else {
       return Uart_Parity_Even;
@@ -88,16 +90,16 @@ static inline void getUartParity(const Serial_CCSDS_Leon3_Conf_T *const device_c
   }
 }
 
-static inline void Leon3SerialCcsdsInit_uart_init(
+static inline void Leon3SerialCcsdsInitUartInit(
     leon3_serial_ccsds_private_data *const self,
-    const Serial_CCSDS_Leon3_Conf_T *const device_configuration) {
+    const Serial_CCSDS_Leon3_Conf_T *const deviceConfiguration) {
 
-    Uart_Id id = getUartId(device_configuration->devname);
+    Uart_Id id = getUartId(deviceConfiguration->devname);
     Uart_Config config = (Uart_Config){ 0 };
     config.isTxEnabled = true;
     config.isRxEnabled = true;
     config.isLoopbackModeEnabled = false;
-    config.parity = getUartParity(device_configuration);
+    config.parity = getUartParity(deviceConfiguration);
 
     self->txHandler.callback = UartTxCallback;
     self->txHandler.arg = self;
@@ -112,7 +114,60 @@ static inline void Leon3SerialCcsdsInit_uart_init(
     Uart_setConfig(&self->uart, &config);
     Uart_startup(&self->uart);
 
-    //TODO: add rtems task for poll
+    Escaper_init(&self->escaper, self->encodedPacketBuffer,
+        Serial_CCSDS_LEON3_ENCODED_PACKET_MAX_SIZE,
+        self->decodedPacketBuffer,
+        Serial_CCSDS_LEON3_DECODED_PACKET_MAX_SIZE);
+
+    rtems_semaphore_create(
+        rtems_build_name('s', 'm', 'R', 'x'),
+        0,
+        SIMPLE_BINARY_SEMAPHORE,
+        0,
+        &self->semRx);
+
+    rtems_semaphore_create(
+        rtems_build_name('s', 'm', 'T', 'x'),
+        0,
+        SIMPLE_BINARY_SEMAPHORE,
+        0,
+        &self->semTx);
+
+    rtems_task_create(rtems_build_name('p', 'o', 'l', 'l'),
+        DRIVER_TASK_PRIORITY,
+        RTEMS_MINIMUM_STACK_SIZE,
+        RTEMS_DEFAULT_MODES,
+        RTEMS_LOCAL,
+        &self->taskId);
+
+    rtems_task_start(self->tasksId, Leon3SerialCcsdsPoll, self);
+}
+
+static inline void Leon3SerialCcsdsPollUartPoll(
+    leon3_serial_ccsds_private_data *const self)
+{
+  size_t length = 0;
+
+  Escaper_start_decoder(&self->escaper);
+
+  rtems_semaphore_obtain(self->semRx, RTEMS_WAIT, MAX_DELAY);
+
+  Uart_readAsync(&self->uart, self->fifoRx, self->rxHandler);
+
+  while (true) {
+    rtems_semaphore_obtain(self->semRx, RTEMS_WAIT, MAX_DELAY);
+
+    length = ByteFifo_getCount(&self->fifoRx);
+    for (size_t i = 0; i < length; i++) {
+      ByteFifo_pull(&self->rxFifo, &self->recvBuffer[i]);
+    }
+
+    Escaper_decode_packet(
+        &self->escaper,
+        self->ipDeviceBusId,
+        self->recvBuffer,
+        length, Broker_receive_packet);
+  }
 }
 
 void Leon3SerialCcsdsInit(
@@ -127,36 +182,16 @@ void Leon3SerialCcsdsInit(
   leon3_serial_ccsds_private_data *self =
       (leon3_serial_ccsds_private_data *)private_data;
 
-  self->m_ip_device_bus_id = bus_id;
+  self->ipDeviceBusId = bus_id;
 
-  Leon3SerialCcsdsInit_uart_init(self, device_configuration);
+  Leon3SerialCcsdsInitUartInit(self, device_configuration);
 }
 
 void Leon3SerialCcsdsPoll(void *private_data) {
   leon3_serial_ccsds_private_data *self =
       (leon3_serial_ccsds_private_data *)private_data;
-  size_t length = 0;
 
-  Escaper_start_decoder(&self->m_escaper);
-
-  // xSemaphoreTake(self->m_rx_semaphore, portMAX_DELAY);
-  // Hal_uart_read(&self->m_hal_uart, self->m_fifo_memory_block,
-  //               Serial_CCSDS_SAMV71_RECV_BUFFER_SIZE, self->m_uart_rx_handler);
-  // while (true) {
-  //   /// Wait for data to arrive. Semaphore will be given
-  //   xSemaphoreTake(self->m_rx_semaphore, portMAX_DELAY);
-
-  //   length = ByteFifo_getCount(&self->m_hal_uart.rxFifo);
-
-  //   for (size_t i = 0; i < length; i++) {
-  //     SamV71SerialCcsdsInterrupt_rx_disable(self);
-  //     ByteFifo_pull(&self->m_hal_uart.rxFifo, &self->m_recv_buffer[i]);
-  //     SamV71SerialCcsdsInterrupt_rx_enable(self);
-  //   }
-
-  //   Escaper_decode_packet(&self->m_escaper, self->m_ip_device_bus_id, self->m_recv_buffer,
-  //                         length, Broker_receive_packet);
-  // }
+  Leon3SerialCcsdsPollUartPoll(self);
 }
 
 void Leon3SerialCcsdsSend(void *private_data, const uint8_t *const data,
@@ -171,13 +206,13 @@ void Leon3SerialCcsdsSend(void *private_data, const uint8_t *const data,
   while (index < length) {
     packetLength =
         Escaper_encode_packet(&self->m_escaper, data, length, &index);
-    // xSemaphoreTake(self->m_tx_semaphore, portMAX_DELAY);
-    
-    // ByteFifo_push(self->fifoRx, )
 
-    Uart_writeAsync(&self->uart, self->fifoRx, self->uart->txHandler);
-    // Hal_uart_write(&self->m_hal_uart,
-    //                (uint8_t *const) & self->m_encoded_packet_buffer,
-    //                packetLength, &self->m_uart_tx_handler);
+    rtems_semaphore_obtain(self->semTx, RTEMS_WAIT, MAX_DELAY);
+
+    ByteFifo_initFromBytes(
+        self->fifoTx,
+        self->encodedPacketBuffer,
+        packetLength);
+    Uart_writeAsync(&self->uart, self->fifoTx, self->txHandler);
   }
 }
