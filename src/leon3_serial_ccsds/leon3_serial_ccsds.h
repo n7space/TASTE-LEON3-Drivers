@@ -22,10 +22,13 @@
 
 #pragma once
 
+#include <assert.h>
+
 #include <Broker.h>
 #include <Escaper.h>
 
 #include <drivers_config.h>
+#include <rtems.h>
 
 #include "Uart.h"
 
@@ -33,7 +36,6 @@
 #define Serial_CCSDS_LEON3_BUFFER_SIZE 256
 #define Serial_CCSDS_LEON3_ENCODED_PACKET_MAX_SIZE 256
 #define Serial_CCSDS_LEON3_DECODED_PACKET_MAX_SIZE BROKER_BUFFER_SIZE
-#define MAX_DELAY 0xFFFFFFFFu
 
 typedef struct final {
     Escaper escaper;
