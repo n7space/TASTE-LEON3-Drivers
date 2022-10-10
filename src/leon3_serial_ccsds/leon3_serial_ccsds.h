@@ -1,23 +1,25 @@
 /**@file
- * This file is part of the TASTE Linux Runtime.
+ * This file is part of the Leon3 Serial CCSDS Driver for the Test Environment.
  *
- * @copyright 2021 N7 Space Sp. z o.o.
+ * @copyright 2022 N7 Space Sp. z o.o.
+ * 
+ * Leon3 Serial CCSDS Driver for the Test Environment was developed under the project AURORA.
+ * This project has received funding from the European Union’s Horizon 2020
+ * research and innovation programme under grant agreement No 101004291”
  *
- * TASTE Linux Runtime was developed under a programme of,
- * and funded by, the European Space Agency (the "ESA").
+ * Leon3 Serial CCSDS Driver for the Test Environment is free software: you can redistribute 
+ * it and/or modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the License,
+ * or (at your option) any later version.
  *
- * Licensed under the ESA Public License (ESA-PL) Permissive,
- * Version 2.3 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Leon3 Serial CCSDS Driver for the Test Environment is distributed in the hope
+ * that it will be useful, but WITHOUT ANY WARRANTY; without even
+ * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
- *     https://essr.esa.int/license/list
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with Leon3 Serial CCSDS Driver for the Test Environment. If not,
+ * see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once

@@ -27,9 +27,9 @@
 #include <EscaperInternal.h>
 
 #define MAX_TLS_SIZE RTEMS_ALIGN_UP( 0, RTEMS_TASK_STORAGE_ALIGNMENT )
-#define LEON3_SERIAL_CCSDS_POLL_STACK_SIZE (1024 > RTEMS_MINIMUM_STACK_SIZE ?  1024 : RTEMS_MINIMUM_STACK_SIZE)
+#define LEON3_SERIAL_CCSDS_POLL_STACK_SIZE (128 > RTEMS_MINIMUM_STACK_SIZE ?  128 : RTEMS_MINIMUM_STACK_SIZE)
 
-rtems_id broker_lock;
+rtems_id brokerLock;
 
 static rtems_id leon3SerialCcsdsPoll_TCB = {0};
 
@@ -37,8 +37,8 @@ RTEMS_ALIGNED(RTEMS_TASK_STORAGE_ALIGNMENT)
     static char leon3SerialCcsdsPoll_TaskBuffer[RTEMS_TASK_STORAGE_SIZE(
     LEON3_SERIAL_CCSDS_POLL_STACK_SIZE + MAX_TLS_SIZE, RTEMS_FLOATING_POINT)];
 
-BYTE_FIFO_CREATE(uartFifoTx, Serial_CCSDS_LEON3_BUFFER_SIZE);
-BYTE_FIFO_CREATE(uartFifoRx, Serial_CCSDS_LEON3_BUFFER_SIZE);
+BYTE_FIFO_CREATE(uartFifoTx, Serial_CCSDS_LEON3_DECODED_PACKET_MAX_SIZE);
+BYTE_FIFO_CREATE(uartFifoRx, Serial_CCSDS_LEON3_ENCODED_PACKET_MAX_SIZE);
 
 static void UartRxCallback(volatile void *private_data) {
   leon3_serial_ccsds_private_data *self =
@@ -118,6 +118,8 @@ static inline void Leon3SerialCcsdsInitUartInit(
     self->rxHandler.lengthCallback = UartRxCallback;
     self->rxHandler.characterCallback = UartRxCallback;
     self->rxHandler.characterArg = self;
+    self->rxHandler.targetCharacter = STOP_BYTE;
+    self->rxHandler.targetLength = Serial_CCSDS_LEON3_DECODED_PACKET_MAX_SIZE;
     self->rxHandler.lengthArg = self;
     
     self->fifoTx = &uartFifoTx;
@@ -134,25 +136,25 @@ static inline void Leon3SerialCcsdsInitUartInit(
 
     const rtems_status_code lockSemaphoreCreateResult = rtems_semaphore_create(
         rtems_build_name('l', 'o', 'c', 'k'),
-        0,
-        RTEMS_BINARY_SEMAPHORE,
-        0,
-        &broker_lock);
+        1,
+        RTEMS_SIMPLE_BINARY_SEMAPHORE,
+        RTEMS_PRIORITY_CEILING,
+        &brokerLock);
     assert(lockSemaphoreCreateResult == RTEMS_SUCCESSFUL);
 
     const rtems_status_code rxSemaphoreCreateResult = rtems_semaphore_create(
         rtems_build_name('s', 'm', 'R', 'x'),
-        0,
-        RTEMS_BINARY_SEMAPHORE,
-        0,
+        1,
+        RTEMS_SIMPLE_BINARY_SEMAPHORE,
+        RTEMS_PRIORITY_CEILING,
         &self->semRx);
     assert(rxSemaphoreCreateResult == RTEMS_SUCCESSFUL);
 
     const rtems_status_code txSemaphoreCreateResult = rtems_semaphore_create(
         rtems_build_name('s', 'm', 'T', 'x'),
-        0,
-        RTEMS_BINARY_SEMAPHORE,
-        0,
+        1,
+        RTEMS_SIMPLE_BINARY_SEMAPHORE,
+        RTEMS_PRIORITY_CEILING,
         &self->semTx);
     assert(txSemaphoreCreateResult == RTEMS_SUCCESSFUL);
 
@@ -184,14 +186,15 @@ static inline void Leon3SerialCcsdsPollUartPoll(
 
   Escaper_start_decoder(&self->escaper);
 
-  rtems_semaphore_obtain(self->semRx, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
+  while (rtems_semaphore_obtain(self->semRx, RTEMS_WAIT, RTEMS_NO_WAIT) != RTEMS_SUCCESSFUL);
 
   Uart_readAsync(&self->uart, self->fifoRx, self->rxHandler);
 
   while (true) {
-    rtems_semaphore_obtain(self->semRx, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
+    while (rtems_semaphore_obtain(self->semRx, RTEMS_WAIT, RTEMS_NO_WAIT) != RTEMS_SUCCESSFUL);
 
     length = ByteFifo_getCount(self->fifoRx);
+
     for (size_t i = 0; i < length; i++) {
       ByteFifo_pull(self->fifoRx, &self->recvBuffer[i]);
     }
@@ -217,7 +220,7 @@ static inline void Leon3SerialCcsdsSendUartSend(
     packetLength =
         Escaper_encode_packet(&self->escaper, data, length, &index);
 
-    rtems_semaphore_obtain(self->semTx, RTEMS_WAIT, RTEMS_NO_TIMEOUT);
+    while (rtems_semaphore_obtain(self->semTx, RTEMS_WAIT, RTEMS_NO_WAIT) != RTEMS_SUCCESSFUL);
 
     ByteFifo_initFromBytes(
         self->fifoTx,
