@@ -1,0 +1,6 @@
+[submodule "TASTE-LEON3-Runtime"]
+	path = TASTE-LEON3-Runtime
+	url = https://github.com/n7space/TASTE-LEON3-Runtime.git
+[submodule "TASTE-Runtime-Common"]
+	path = TASTE-Runtime-Common
+	url = https://github.com/n7space/TASTE-Runtime-Common.git
