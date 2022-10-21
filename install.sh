@@ -14,7 +14,6 @@ cp -r "${SOURCES}/TASTE-LEON3-Runtime/Leon3-BSP" "${PREFIX}/include/TASTE-LEON3-
 cp -r "${SOURCES}/TASTE-LEON3-Runtime/BrokerLock" "${PREFIX}/include/TASTE-LEON3-Runtime/"
 cp -r "${SOURCES}/TASTE-LEON3-Runtime/Leon3-BSP/src/Uart" "${PREFIX}/include/TASTE-LEON3-Runtime/"
 cp -r "${SOURCES}/TASTE-LEON3-Runtime/Leon3-BSP/src/Utils" "${PREFIX}/include/TASTE-LEON3-Runtime/"
-cp -r "${SOURCES}/RuntimeMocks" "${PREFIX}/include/TASTE-LEON3-Runtime/"
 
 cp -r "${SOURCES}/TASTE-Runtime-Common/src/Broker" "${PREFIX}/include/TASTE-LEON3-Runtime/"
 cp -r "${SOURCES}/TASTE-Runtime-Common/src/Escaper" "${PREFIX}/include/TASTE-LEON3-Runtime/"

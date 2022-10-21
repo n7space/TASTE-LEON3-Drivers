@@ -1,24 +1,24 @@
 /**@file
- * This file is part of the Leon3 Serial CCSDS Driver for the Test Environment.
+ * This file is part of the Leon3 Serial CCSDS Driver for the TASTE Leon3 Drivers.
  *
  * @copyright 2022 N7 Space Sp. z o.o.
  * 
- * Leon3 Serial CCSDS Driver for the Test Environment was developed under the project AURORA.
+ * Leon3 Serial CCSDS Driver for the TASTE Leon3 Drivers was developed under the project AURORA.
  * This project has received funding from the European Union’s Horizon 2020
  * research and innovation programme under grant agreement No 101004291”
  *
- * Leon3 Serial CCSDS Driver for the Test Environment is free software: you can redistribute 
+ * Leon3 Serial CCSDS Driver for the TASTE Leon3 Drivers is free software: you can redistribute 
  * it and/or modify it under the terms of the GNU General Public License as
  * published by the Free Software Foundation; either version 2 of the License,
  * or (at your option) any later version.
  *
- * Leon3 Serial CCSDS Driver for the Test Environment is distributed in the hope
+ * Leon3 Serial CCSDS Driver for the TASTE Leon3 Drivers is distributed in the hope
  * that it will be useful, but WITHOUT ANY WARRANTY; without even
  * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Leon3 Serial CCSDS Driver for the Test Environment. If not,
+ * along with Leon3 Serial CCSDS Driver for the TASTE Leon3 Drivers. If not,
  * see <http://www.gnu.org/licenses/>.
  */
 
@@ -39,20 +39,29 @@
 #define Serial_CCSDS_LEON3_ENCODED_PACKET_MAX_SIZE 256
 #define Serial_CCSDS_LEON3_DECODED_PACKET_MAX_SIZE BROKER_BUFFER_SIZE
 
+#define MAX_TLS_SIZE RTEMS_ALIGN_UP( 0, RTEMS_TASK_STORAGE_ALIGNMENT )
+#define LEON3_SERIAL_CCSDS_POLL_STACK_SIZE (128 > RTEMS_MINIMUM_STACK_SIZE ?  128 : RTEMS_MINIMUM_STACK_SIZE)
+
 typedef struct final {
     Escaper escaper;
     Uart uart;
     enum SystemBus ipDeviceBusId;
     Uart_TxHandler txHandler;
     Uart_RxHandler rxHandler;
-    ByteFifo *fifoTx;
-    ByteFifo *fifoRx;
+    ByteFifo fifoTx;
+    ByteFifo fifoRx;
+    uint8_t fifoMemoryBlockRx[Serial_CCSDS_LEON3_ENCODED_PACKET_MAX_SIZE];
+    uint8_t fifoMemoryBlockTx[Serial_CCSDS_LEON3_DECODED_PACKET_MAX_SIZE];
     rtems_id semRx;
     rtems_id semTx;
     rtems_id taskId;
+    rtems_id leon3SerialCcsdsPoll_TCB;
     uint8_t recvBuffer[Serial_CCSDS_LEON3_BUFFER_SIZE];
     uint8_t encodedPacketBuffer[Serial_CCSDS_LEON3_ENCODED_PACKET_MAX_SIZE];
     uint8_t decodedPacketBuffer[Serial_CCSDS_LEON3_DECODED_PACKET_MAX_SIZE];
+    RTEMS_ALIGNED(RTEMS_TASK_STORAGE_ALIGNMENT)  
+    char leon3SerialCcsdsPoll_TaskBuffer[RTEMS_TASK_STORAGE_SIZE(
+        LEON3_SERIAL_CCSDS_POLL_STACK_SIZE + MAX_TLS_SIZE, RTEMS_FLOATING_POINT)];
 } leon3_serial_ccsds_private_data;
 
 /**
