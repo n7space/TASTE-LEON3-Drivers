@@ -75,6 +75,26 @@ static inline Uart_Id getUartId(const Serial_CCSDS_Leon3_Device_T dev)
   }
 }
 
+static inline Uart_interrupt interruptNumber(Uart_Id id)
+{
+    switch(id) {
+        case Uart_Id_0:
+            return Uart0_interrupt;
+        case Uart_Id_1:
+            return Uart1_interrupt;
+        case Uart_Id_2:
+            return Uart2_interrupt;
+        case Uart_Id_3:
+            return Uart3_interrupt;
+        case Uart_Id_4:
+            return Uart4_interrupt;
+        case Uart_Id_5:
+            return Uart5_interrupt;
+        default:
+            return UartInvalid_interrupt;
+    }
+}
+
 static inline Uart_Parity getUartParity(
     const Serial_CCSDS_Leon3_Conf_T *const deviceConfiguration)
 {
@@ -177,7 +197,9 @@ static inline void Leon3SerialCcsdsPollUartPoll(
     length = ByteFifo_getCount(&self->fifoRx);
 
     for (size_t i = 0; i < length; i++) {
+      rtems_interrupt_vector_disable(interruptNumber(self->uart.id));
       ByteFifo_pull(&self->fifoRx, &self->recvBuffer[i]);
+      rtems_interrupt_vector_enable(interruptNumber(self->uart.id));
     }
 
     Escaper_decode_packet(
