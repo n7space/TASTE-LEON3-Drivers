@@ -192,7 +192,9 @@ static inline void Leon3SerialCcsdsPollUartPoll(
   while (true) {
     while (rtems_semaphore_obtain(self->semRx, RTEMS_WAIT, RTEMS_NO_WAIT) != RTEMS_SUCCESSFUL);
 
+    rtems_interrupt_vector_disable(interruptNumber(self->uart.id));
     length = ByteFifo_getCount(&self->fifoRx);
+    rtems_interrupt_vector_enable(interruptNumber(self->uart.id));
 
     for (size_t i = 0; i < length; i++) {
       rtems_interrupt_vector_disable(interruptNumber(self->uart.id));
