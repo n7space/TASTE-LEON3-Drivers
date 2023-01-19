@@ -127,7 +127,7 @@ static inline void Leon3SerialCcsdsInitUartInit(
     self->rxHandler.characterCallback = UartRxCallback;
     self->rxHandler.characterArg = self;
     self->rxHandler.targetCharacter = STOP_BYTE;
-    self->rxHandler.targetLength = Serial_CCSDS_LEON3_DECODED_PACKET_MAX_SIZE;
+    self->rxHandler.targetLength = Serial_CCSDS_LEON3_DECODED_PACKET_MAX_SIZE / 2;
     self->rxHandler.lengthArg = self;
 
     ByteFifo_init(&self->fifoTx, &self->fifoMemoryBlockTx, Serial_CCSDS_LEON3_DECODED_PACKET_MAX_SIZE);
