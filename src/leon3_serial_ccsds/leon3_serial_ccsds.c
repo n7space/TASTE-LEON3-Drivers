@@ -130,9 +130,6 @@ static inline void Leon3SerialCcsdsInitUartInit(
     self->rxHandler.targetLength = Serial_CCSDS_LEON3_DECODED_PACKET_MAX_SIZE / 2;
     self->rxHandler.lengthArg = self;
 
-    ByteFifo_init(&self->fifoTx, &self->fifoMemoryBlockTx, Serial_CCSDS_LEON3_DECODED_PACKET_MAX_SIZE);
-    ByteFifo_init(&self->fifoRx, &self->fifoMemoryBlockRx, Serial_CCSDS_LEON3_ENCODED_PACKET_MAX_SIZE);
-
     Uart_init(id, &self->uart);
     Uart_setConfig(&self->uart, &config);
 
@@ -189,6 +186,7 @@ static inline void Leon3SerialCcsdsPollUartPoll(
 
   while (rtems_semaphore_obtain(self->semRx, RTEMS_WAIT, RTEMS_NO_WAIT) != RTEMS_SUCCESSFUL);
 
+  ByteFifo_init(&self->fifoRx, &self->fifoMemoryBlockRx, Serial_CCSDS_LEON3_ENCODED_PACKET_MAX_SIZE);
   Uart_readAsync(&self->uart, &self->fifoRx, self->rxHandler);
 
   while (true) {
