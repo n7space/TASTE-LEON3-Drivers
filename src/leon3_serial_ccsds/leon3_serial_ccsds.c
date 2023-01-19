@@ -142,7 +142,7 @@ static inline void Leon3SerialCcsdsInitUartInit(
  	    .initial_priority =  1,
       .storage_area = self->leon3SerialCcsdsPoll_TaskBuffer,
       .storage_size = sizeof(self->leon3SerialCcsdsPoll_TaskBuffer),
-      .maximum_thread_local_storage_size = 0,
+      .maximum_thread_local_storage_size = UART_TLS_SIZE,
       .storage_free = NULL,
       .initial_modes = RTEMS_PREEMPT,
       .attributes = RTEMS_DEFAULT_ATTRIBUTES | RTEMS_FLOATING_POINT
