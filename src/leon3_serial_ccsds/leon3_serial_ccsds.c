@@ -95,6 +95,25 @@ static inline Uart_interrupt interruptNumber(Uart_Id id)
     }
 }
 
+static inline Uart_BaudRate getUartBaudRate(
+    const Serial_CCSDS_Leon3_Conf_T *const deviceConfiguration)
+{
+  switch(deviceConfiguration->speed) {
+      case Serial_CCSDS_Leon3_Baudrate_T_b9600:
+          return Uart_BaudRate_9600;
+      case Serial_CCSDS_Leon3_Baudrate_T_b19200:
+          return Uart_BaudRate_19200;
+      case Serial_CCSDS_Leon3_Baudrate_T_b38400:
+          return Uart_BaudRate_38400;
+      case Serial_CCSDS_Leon3_Baudrate_T_b57600:
+          return Uart_BaudRate_57600;
+      case Serial_CCSDS_Leon3_Baudrate_T_b115200:
+          return Uart_BaudRate_115200;
+      default:
+          return Uart_BaudRate_Invalid;
+  }
+}
+
 static inline Uart_Parity getUartParity(
     const Serial_CCSDS_Leon3_Conf_T *const deviceConfiguration)
 {
@@ -118,6 +137,7 @@ static inline void Leon3SerialCcsdsInitUartInit(
     config.isTxEnabled = true;
     config.isRxEnabled = true;
     config.isLoopbackModeEnabled = false;
+    config.baudRate = getUartBaudRate(deviceConfiguration);
     config.parity = getUartParity(deviceConfiguration);
 
     self->txHandler.callback = UartTxCallback;
